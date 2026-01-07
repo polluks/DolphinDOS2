@@ -1,14 +1,15 @@
 # DolphinDOS2
-DolphinDOS 2 is a kernal ROM replacement for the C64 and 1541 disk drive to speed up disk operations
+DolphinDOS 2 is a kernal ROM replacement for the C64 and 1541 disk drive to speed up disk operations.
 This repository is not affiliated with the original DolphinDOS developers. No support will be given.
 Use at your own risk.
 
-The original DolphinDOS 2 was a hardware/software package but these rom images
-can be installed in an Ultimate64 without any extra hardware.
+The original DolphinDOS 2 was a hardware/software package but these rom images can be installed in an Ultimate64 or Commodore 64 Ultimate without any extra hardware.
 
 ## INSTALL
-1. Download the latest release and unzip on your computer.
-1. Copy the kernal.rom and 1541.rom files on to your Ultimate64 USB stick.
+* Download the latest release and unzip on your computer.
+* Copy the kernal.rom and 1541.rom files on to your Ultimate64 USB stick.
+
+### Ultimate 64
 1. On the Ultimate64 navigate to the directory where you copied the roms.
 1. Select kernal.rom and "Flash as Alt. Kernal 3".
 1. Select 1541.rom and "Use as Drive ROM 3".
@@ -21,6 +22,13 @@ can be installed in an Ultimate64 without any extra hardware.
 	1. 1541 Drive A Settings
 		* 1541 ROM Select: Custom3*
 		* 1541 RAM BOard: $4000-$7FFF (16K)
+
+### Commodore 64 Ultimate
+1. Go into the Memory & Roms settings and choose kernal.rom for the C64, and 1541.rom for the 1541 disk drive.
+1. Go into the 1541 drive settings and enable extra memory.
+1. Go into the secret advanced C64U settings by tapping shift-F1 and in Machine Tweaks, enable the Parallel Connection setting.
+
+C64U instructions taken from [here](https://www.facebook.com/groups/1249159557042604/?multi_permalinks=1270521541573072).
 
 Reboot the machine and you should see DOLPHINDOS 2.0 on the screen.
 
