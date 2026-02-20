@@ -613,14 +613,19 @@
 5b68 d0 04    bne $5b6e
 5b6a c5 a1    cmp $a1
 5b6c d0 f7    bne $5b65
-5b6e 60       rts 
-5b6f 8d 01 dd sta $dd01
-5b72 ad 0d dd lda $dd0d
-5b75 ad 00 dd lda $dd00
-5b78 29 fb    and #$fb
-5b7a 8d 00 dd sta $dd00
-5b7d 09 04    ora #$04
-5b7f 8d 00 dd sta $dd00
+5b6e 60       rts
+; =============================================================================
+; PARALLEL_SEND_BYTE - Send one byte via parallel port
+; Entry: A = byte to send
+; Uses: $DD01 (parallel data), $DD00 (handshake via CLK line bit 2)
+; =============================================================================
+5b6f 8d 01 dd sta $dd01      ; Write byte to parallel data port (directly to 1541)
+5b72 ad 0d dd lda $dd0d      ; Read CIA#2 ICR to clear any pending FLAG interrupt
+5b75 ad 00 dd lda $dd00      ; Read current port A state
+5b78 29 fb    and #$fb       ; Clear bit 2 (CLK OUT low = "data ready")
+5b7a 8d 00 dd sta $dd00      ; Signal to drive: byte is ready on port
+5b7d 09 04    ora #$04       ; Set bit 2 (CLK OUT high = "idle/done")
+5b7f 8d 00 dd sta $dd00      ; Complete handshake cycle
 5b82 60       rts 
 5b83 a2 00    ldx #$00
 5b85 a0 dc    ldy #$dc
@@ -1712,50 +1717,59 @@
 63aa c9 24    cmp #$24
 63ac d0 03    bne $63b1
 63ae 4c 1a f9 jmp $f91a
-63b1 ad 00 dd lda $dd00
-63b4 09 08    ora #$08
-63b6 8d 00 dd sta $dd00
-63b9 78       sei 
-63ba 20 8e ee jsr $ee8e
-63bd 20 97 ee jsr $ee97
-63c0 20 b3 ee jsr $eeb3
-63c3 78       sei 
-63c4 4c 6f f9 jmp $f96f
-63c7 20 a9 ee jsr $eea9
-63ca b0 64    bcs $6430
-63cc 20 85 ee jsr $ee85
-63cf 24 a3    bit $a3
-63d1 10 0a    bpl $63dd
-63d3 20 a9 ee jsr $eea9
+; =============================================================================
+; PARALLEL_MODE_ENTRY - Initialize parallel transfer mode for fast load
+; Sets DATA OUT high to signal parallel mode to drive
+; =============================================================================
+63b1 ad 00 dd lda $dd00      ; Read CIA#2 port A
+63b4 09 08    ora #$08       ; Set bit 3 (DATA OUT high)
+63b6 8d 00 dd sta $dd00      ; Signal: "C64 ready for parallel mode"
+63b9 78       sei            ; Disable interrupts for timing-critical code
+63ba 20 8e ee jsr $ee8e      ; IEC bus timing setup
+63bd 20 97 ee jsr $ee97      ; Release CLK line
+63c0 20 b3 ee jsr $eeb3      ; Additional IEC setup
+63c3 78       sei            ; Ensure interrupts still off
+63c4 4c 6f f9 jmp $f96f      ; Continue to standard load routine
+; =============================================================================
+; SERIAL_BIT_RECEIVE - Fallback bit-by-bit receive (when parallel unavailable)
+; Receives 8 bits via IEC bus CLK/DATA lines, stores in $95
+; =============================================================================
+63c7 20 a9 ee jsr $eea9      ; Wait for CLK edge
+63ca b0 64    bcs $6430      ; Error: timeout
+63cc 20 85 ee jsr $ee85      ; Release DATA line
+63cf 24 a3    bit $a3        ; Check handshake state
+63d1 10 0a    bpl $63dd      ; Skip sync if not needed
+63d3 20 a9 ee jsr $eea9      ; Wait for sync pulse high
 63d6 90 fb    bcc $63d3
-63d8 20 a9 ee jsr $eea9
+63d8 20 a9 ee jsr $eea9      ; Wait for sync pulse low
 63db b0 fb    bcs $63d8
-63dd 20 a9 ee jsr $eea9
+63dd 20 a9 ee jsr $eea9      ; Wait for data ready signal
 63e0 90 fb    bcc $63dd
-63e2 20 8e ee jsr $ee8e
-63e5 a9 08    lda #$08
-63e7 85 a5    sta $a5
-63e9 ad 00 dd lda $dd00
-63ec cd 00 dd cmp $dd00
-63ef d0 f8    bne $63e9
-63f1 0a       asl a
-63f2 90 3f    bcc $6433
-63f4 66 95    ror $95
-63f6 b0 05    bcs $63fd
-63f8 20 a0 ee jsr $eea0
+63e2 20 8e ee jsr $ee8e      ; Prepare for bit reception
+63e5 a9 08    lda #$08       ; 8 bits to receive
+63e7 85 a5    sta $a5        ; Store bit counter
+; --- Receive loop: get 8 bits from $DD00 bit 7 ---
+63e9 ad 00 dd lda $dd00      ; Read port (bit 7 = data from drive)
+63ec cd 00 dd cmp $dd00      ; Wait for stable read
+63ef d0 f8    bne $63e9      ; Loop until two reads match
+63f1 0a       asl a          ; Shift bit 7 into carry
+63f2 90 3f    bcc $6433      ; Carry clear (bit 7 was 0): EOI/last-byte condition
+63f4 66 95    ror $95        ; Rotate carry into result byte
+63f6 b0 05    bcs $63fd      ; Branch based on bit value
+63f8 20 a0 ee jsr $eea0      ; Acknowledge: pull DATA low
 63fb d0 03    bne $6400
-63fd 20 97 ee jsr $ee97
-6400 20 85 ee jsr $ee85
-6403 ea       nop 
-6404 ea       nop 
-6405 ea       nop 
-6406 ea       nop 
-6407 ad 00 dd lda $dd00
-640a 29 df    and #$df
-640c 09 10    ora #$10
+63fd 20 97 ee jsr $ee97      ; Or: release CLK
+6400 20 85 ee jsr $ee85      ; Release DATA line
+6403 ea       nop            ; Timing delay (4 cycles)
+6404 ea       nop
+6405 ea       nop
+6406 ea       nop
+6407 ad 00 dd lda $dd00      ; Read port for next handshake
+640a 29 df    and #$df       ; Clear bit 5
+640c 09 10    ora #$10       ; Set bit 4 (acknowledge received)
 640e 8d 00 dd sta $dd00
-6411 c6 a5    dec $a5
-6413 d0 d4    bne $63e9
+6411 c6 a5    dec $a5        ; Decrement bit counter
+6413 d0 d4    bne $63e9      ; Loop until 8 bits received
 6415 a9 04    lda #$04
 6417 8d 07 dc sta $dc07
 641a a9 19    lda #$19
@@ -1845,55 +1859,71 @@
 64d2 20 1c fe jsr $fe1c
 64d5 e6 a5    inc $a5
 64d7 d0 ca    bne $64a3
-64d9 a9 08    lda #$08
-64db 85 a5    sta $a5
-64dd ad 00 dd lda $dd00
-64e0 cd 00 dd cmp $dd00
-64e3 d0 f8    bne $64dd
-64e5 0a       asl a
-64e6 10 f5    bpl $64dd
-64e8 66 a4    ror $a4
-64ea ad 00 dd lda $dd00
-64ed cd 00 dd cmp $dd00
-64f0 d0 f8    bne $64ea
-64f2 0a       asl a
-64f3 30 f5    bmi $64ea
-64f5 c6 a5    dec $a5
-64f7 d0 e4    bne $64dd
-64f9 20 a0 ee jsr $eea0
-64fc 24 90    bit $90
-64fe 50 03    bvc $6503
-6500 20 06 ee jsr $ee06
-6503 a5 a4    lda $a4
-6505 58       cli 
-6506 18       clc 
-6507 60       rts 
+; =============================================================================
+; PARALLEL_FAST_RECEIVE - Receive byte via parallel port bit 7 handshake
+; Uses two-phase clocking: wait for bit7 high (data), then wait for bit7 low
+; Result stored in $A4, returned in A
+; =============================================================================
+64d9 a9 08    lda #$08       ; 8 bits to receive
+64db 85 a5    sta $a5        ; Store in bit counter
+; --- Receive bit loop ---
+64dd ad 00 dd lda $dd00      ; Read CIA#2 port A
+64e0 cd 00 dd cmp $dd00      ; Double-read for stability (debounce)
+64e3 d0 f8    bne $64dd      ; Retry if reads don't match
+64e5 0a       asl a          ; Shift bit 7 into carry
+64e6 10 f5    bpl $64dd      ; Wait until bit 7 is HIGH (data ready)
+64e8 66 a4    ror $a4        ; Rotate carry (the data bit) into result
+; --- Wait for clock phase 2 (bit 7 goes low) ---
+64ea ad 00 dd lda $dd00      ; Read port again
+64ed cd 00 dd cmp $dd00      ; Stability check
+64f0 d0 f8    bne $64ea      ; Retry if unstable
+64f2 0a       asl a          ; Shift bit 7 into carry
+64f3 30 f5    bmi $64ea      ; Wait until bit 7 is LOW (next bit ready)
+64f5 c6 a5    dec $a5        ; Decrement bit counter
+64f7 d0 e4    bne $64dd      ; Loop until 8 bits received
+64f9 20 a0 ee jsr $eea0      ; Pull DATA low (acknowledge byte)
+64fc 24 90    bit $90        ; Check status flags
+64fe 50 03    bvc $6503      ; Skip if no overflow
+6500 20 06 ee jsr $ee06      ; Handle EOI condition
+6503 a5 a4    lda $a4        ; Return received byte in A
+6505 58       cli            ; Re-enable interrupts
+6506 18       clc            ; Clear carry (success)
+6507 60       rts
+; =============================================================================
+; HANDSHAKE HELPER ROUTINES - Manipulate $DD00 bits for IEC/parallel signaling
+; =============================================================================
+; CLR_ATN - Clear bit 4 (ATN OUT low)
 6508 ad 00 dd lda $dd00
-650b 29 ef    and #$ef
+650b 29 ef    and #$ef       ; Clear bit 4
 650d 8d 00 dd sta $dd00
-6510 60       rts 
+6510 60       rts
+; SET_ATN - Set bit 4 (ATN OUT high)
 6511 ad 00 dd lda $dd00
-6514 09 10    ora #$10
+6514 09 10    ora #$10       ; Set bit 4
 6516 8d 00 dd sta $dd00
-6519 60       rts 
+6519 60       rts
+; CLR_BIT5 - Clear bit 5 (directly mapped to user port)
 651a ad 00 dd lda $dd00
-651d 29 df    and #$df
+651d 29 df    and #$df       ; Clear bit 5
 651f 8d 00 dd sta $dd00
-6522 60       rts 
+6522 60       rts
+; SET_BIT5 - Set bit 5 (directly mapped to user port)
 6523 ad 00 dd lda $dd00
-6526 09 20    ora #$20
+6526 09 20    ora #$20       ; Set bit 5
 6528 8d 00 dd sta $dd00
-652b 60       rts 
-652c ad 00 dd lda $dd00
-652f cd 00 dd cmp $dd00
-6532 d0 f8    bne $652c
-6534 0a       asl a
-6535 60       rts 
-6536 8a       txa 
-6537 a2 64    ldx #$64
-6539 ca       dex 
-653a d0 fd    bne $6539
-653c aa       tax 
+652b 60       rts
+; WAIT_STABLE_READ - Read $DD00 until stable, return bit 7 in carry
+652c ad 00 dd lda $dd00      ; Read port
+652f cd 00 dd cmp $dd00      ; Compare with second read
+6532 d0 f8    bne $652c      ; Loop until stable
+6534 0a       asl a          ; Shift bit 7 into carry
+6535 60       rts
+; SHORT_DELAY - ~500 cycle delay loop
+6536 8a       txa            ; Save X
+6537 a2 64    ldx #$64       ; 100 iterations
+6539 ca       dex
+653a d0 fd    bne $6539      ; Loop (5 cycles * 100 = 500 cycles)
+653c aa       tax            ; Restore X
 653d 60       rts 
 653e 20 d2 f5 jsr $f5d2
 6541 e0 02    cpx #$02
@@ -3221,45 +3251,57 @@
 6fe7 8d 03 dd sta $dd03
 6fea ad 95 02 lda $0295
 6fed 8d 01 dd sta $dd01
-6ff0 68       pla 
-6ff1 60       rts 
-6ff2 86 a5    stx $a5
-6ff4 ad 0c dc lda $dc0c
-6ff7 10 49    bpl $7042
-6ff9 ad 00 dd lda $dd00
-6ffc 30 3a    bmi $7038
-6ffe 29 ef    and #$ef
+6ff0 68       pla
+6ff1 60       rts
+; =============================================================================
+; PARALLEL_TRANSFER_CORE - Core parallel byte send routine
+; Entry: $95 = byte to send, X = saved across call
+; Exit: C=0 success, C=1 error, A=$80 on timeout
+; Uses $DD00 bit 4 for handshake, $DD01 for data
+; =============================================================================
+6ff2 86 a5    stx $a5        ; Save X register
+6ff4 ad 0c dc lda $dc0c      ; Read CIA#1 serial port register
+6ff7 10 49    bpl $7042      ; Branch if bit 7 clear (not in parallel mode)
+6ff9 ad 00 dd lda $dd00      ; Read CIA#2 port A
+6ffc 30 3a    bmi $7038      ; Abort if DATA IN high (bit 7 set): unexpected bus state
+6ffe 29 ef    and #$ef       ; Clear bit 4 (signal "ready to send")
 7000 8d 00 dd sta $dd00
-7003 24 a3    bit $a3
-7005 10 11    bpl $7018
-7007 2c 00 dd bit $dd00
-700a 10 fb    bpl $7007
-700c a2 1e    ldx #$1e
-700e ad 00 dd lda $dd00
-7011 10 05    bpl $7018
-7013 ca       dex 
-7014 d0 f8    bne $700e
-7016 f0 0c    beq $7024
-7018 ad 00 dd lda $dd00
-701b 10 fb    bpl $7018
-701d a6 95    ldx $95
-701f 8e 01 dd stx $dd01
-7022 a2 1e    ldx #$1e
-7024 09 10    ora #$10
+7003 24 a3    bit $a3        ; Check handshake mode flag
+7005 10 11    bpl $7018      ; Skip sync wait if not needed
+; --- Wait for drive acknowledgment (bit 7 high) ---
+7007 2c 00 dd bit $dd00      ; Test bit 7
+700a 10 fb    bpl $7007      ; Loop until drive signals ready
+700c a2 1e    ldx #$1e       ; Timeout counter (30)
+700e ad 00 dd lda $dd00      ; Read port
+7011 10 05    bpl $7018      ; Continue if bit 7 went low
+7013 ca       dex            ; Decrement timeout
+7014 d0 f8    bne $700e      ; Loop until timeout
+7016 f0 0c    beq $7024      ; Timeout: skip data write
+; --- Wait for drive ready signal (bit 7 high) ---
+7018 ad 00 dd lda $dd00      ; Read port
+701b 10 fb    bpl $7018      ; Wait for bit 7 high
+; --- Send byte via parallel port ---
+701d a6 95    ldx $95        ; Get byte to send
+701f 8e 01 dd stx $dd01      ; WRITE BYTE TO PARALLEL PORT
+7022 a2 1e    ldx #$1e       ; Timeout counter (30)
+; --- Signal data ready and wait for acknowledge ---
+7024 09 10    ora #$10       ; Set bit 4 (signal "data valid")
 7026 8d 00 dd sta $dd00
-7029 a9 03    lda #$03
-702b ca       dex 
-702c 30 0c    bmi $703a
-702e 2c 00 dd bit $dd00
-7031 30 f8    bmi $702b
-7033 a6 a5    ldx $a5
-7035 18       clc 
-7036 58       cli 
-7037 60       rts 
-7038 a9 80    lda #$80
-703a a6 a5    ldx $a5
-703c 20 51 f9 jsr $f951
-703f 4c b2 ed jmp $edb2
+7029 a9 03    lda #$03       ; Error code if timeout
+702b ca       dex            ; Decrement timeout counter
+702c 30 0c    bmi $703a      ; Timeout expired: error
+702e 2c 00 dd bit $dd00      ; Test bit 7
+7031 30 f8    bmi $702b      ; Wait for bit 7 low (drive acknowledged)
+; --- Success exit ---
+7033 a6 a5    ldx $a5        ; Restore X register
+7035 18       clc            ; Clear carry (success)
+7036 58       cli            ; Re-enable interrupts
+7037 60       rts
+; --- Error exit ---
+7038 a9 80    lda #$80       ; Device not present error
+703a a6 a5    ldx $a5        ; Restore X
+703c 20 51 f9 jsr $f951      ; IEC bus cleanup
+703f 4c b2 ed jmp $edb2      ; Return with error status
 7042 4a       lsr a
 7043 29 20    and #$20
 7045 f0 1b    beq $7062
@@ -3929,11 +3971,15 @@
 75b5 ad 35 e5 lda $e535
 75b8 8d 86 02 sta $0286
 75bb 4c a0 e5 jmp $e5a0
-75be a9 10    lda #$10
-75c0 2c 0d dd bit $dd0d
-75c3 d0 05    bne $75ca
-75c5 2c 00 dd bit $dd00
-75c8 10 f6    bpl $75c0
+; =============================================================================
+; WAIT_PARALLEL_HANDSHAKE - Wait for drive to signal via FLAG or bit 4
+; Exit: Returns when either FLAG interrupt or $DD00 bit 4 goes high
+; =============================================================================
+75be a9 10    lda #$10       ; Bit mask for FLAG (bit 4 of ICR)
+75c0 2c 0d dd bit $dd0d      ; Check CIA#2 interrupt control register
+75c3 d0 05    bne $75ca      ; Exit if FLAG interrupt occurred
+75c5 2c 00 dd bit $dd00      ; Check bit 4 of port A
+75c8 10 f6    bpl $75c0      ; Loop until bit 7 high (drive signaled)
 75ca 60       rts 
 75cb 48       pha 
 75cc 8a       txa 

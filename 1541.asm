@@ -9135,136 +9135,174 @@ ffff ff       ???
 27c2 45 19    eor $19
 27c4 85 1a    sta $1a
 27c6 a0 00    ldy #$00
-27c8 60       rts 
+27c8 60       rts
+; =============================================================================
+; PARALLEL_MODE_DETECT - Detect and initialize parallel transfer mode
+; Called during job loop to check if C64 requests parallel mode
+; Sets $600A bit 7 when parallel mode is active
+; =============================================================================
 27c9 a9 00    lda #$00
-27cb 8d 0a 60 sta $600a
-27ce a5 79    lda $79
+27cb 8d 0a 60 sta $600a      ; Clear parallel mode flag initially
+27ce a5 79    lda $79        ; Check for pending track/sector
 27d0 05 7a    ora $7a
-27d2 f0 37    beq $280b
-27d4 ad 03 60 lda $6003
-27d7 49 12    eor #$12
-27d9 f0 30    beq $280b
-27db 2c 0d 18 bit $180d
-27de a9 10    lda #$10
-27e0 2c 00 18 bit $1800
-27e3 10 2b    bpl $2810
-27e5 2c 0d 18 bit $180d
-27e8 f0 f6    beq $27e0
-27ea a9 0b    lda #$0b
-27ec 8d 0c 18 sta $180c
-27ef 2c 00 18 bit $1800
-27f2 2c 01 18 bit $1801
-27f5 a9 80    lda #$80
-27f7 8d 0a 60 sta $600a
-27fa a9 01    lda #$01
-27fc 8d 0c 18 sta $180c
-27ff a9 00    lda #$00
-2801 8d 03 18 sta $1803
-2804 a5 79    lda $79
-2806 d0 03    bne $280b
-2808 ce 03 18 dec $1803
-280b 2c 00 18 bit $1800
-280e 30 fb    bmi $280b
-2810 4c d7 e8 jmp $e8d7
-2813 a9 04    lda #$04
-2815 2c 00 18 bit $1800
-2818 30 46    bmi $2860
-281a d0 f9    bne $2815
-281c ad 00 18 lda $1800
-281f 29 fd    and #$fd
-2821 8d 00 18 sta $1800
-2824 a0 07    ldy #$07
-2826 a9 04    lda #$04
-2828 2c 00 18 bit $1800
-282b 30 33    bmi $2860
-282d d0 22    bne $2851
-282f 88       dey 
-2830 d0 f6    bne $2828
+27d2 f0 37    beq $280b      ; Skip if no data pending
+27d4 ad 03 60 lda $6003      ; Read DolphinDOS mode register
+27d7 49 12    eor #$12       ; Check for parallel mode magic value
+27d9 f0 30    beq $280b      ; Skip if not in parallel mode
+; --- Check for ATN signal from C64 ---
+27db 2c 0d 18 bit $180d      ; Read VIA#1 IFR (sets N/V/Z from flag bits)
+27de a9 10    lda #$10       ; Bit 4 mask (used for Z-flag test of IFR bit 4)
+27e0 2c 00 18 bit $1800      ; BPL/BMI tests bit 7 of $1800 (parallel handshake)
+27e3 10 2b    bpl $2810      ; Exit if bit 7 clear (no handshake activity)
+27e5 2c 0d 18 bit $180d      ; Read IFR: Z tests bit 4 (ATN IN interrupt flag)
+27e8 f0 f6    beq $27e0      ; Loop if bit 4 not set (no ATN interrupt yet)
+; --- Initialize VIA for parallel data transfer ---
+27ea a9 0b    lda #$0b       ; PCR: CA1 neg edge, CA2 handshake out
+27ec 8d 0c 18 sta $180c      ; Configure VIA peripheral control
+27ef 2c 00 18 bit $1800      ; Sync with port state
+27f2 2c 01 18 bit $1801      ; Dummy read of parallel port
+27f5 a9 80    lda #$80       ; Set bit 7 = parallel mode active
+27f7 8d 0a 60 sta $600a      ; Store in mode flag
+27fa a9 01    lda #$01       ; PCR: CA1 pos edge
+27fc 8d 0c 18 sta $180c      ; Reconfigure VIA
+27ff a9 00    lda #$00       ; All bits input
+2801 8d 03 18 sta $1803      ; Set port A data direction (input mode)
+2804 a5 79    lda $79        ; Check track number
+2806 d0 03    bne $280b      ; Skip if track != 0
+2808 ce 03 18 dec $1803      ; track=0 (write job): set DDRA=$FF (drive sends on port A)
+; --- Wait for ATN release before returning ---
+280b 2c 00 18 bit $1800      ; Check ATN line (bit 7)
+280e 30 fb    bmi $280b      ; Wait until ATN released (bit 7 low)
+2810 4c d7 e8 jmp $e8d7      ; Return to DOS job loop
+; =============================================================================
+; PARALLEL_RECEIVE_BYTE - Receive one byte from C64 via parallel port
+; Exit: A = received byte, also stored in $85
+;       $F8 = 0 if successful
+; Uses: $1800 (VIA port B) for handshake, $1801 (port A) for data
+; =============================================================================
+2813 a9 04    lda #$04       ; Bit 2 mask (CLK IN from C64)
+2815 2c 00 18 bit $1800      ; Check CLK line
+2818 30 46    bmi $2860      ; Error: ATN asserted (abort)
+281a d0 f9    bne $2815      ; Wait for CLK low (C64 signals "sending")
+; --- Acknowledge: pull DATA low ---
+281c ad 00 18 lda $1800      ; Read port B
+281f 29 fd    and #$fd       ; Clear bit 1 (DATA OUT low)
+2821 8d 00 18 sta $1800      ; Signal: "drive ready to receive"
+; --- Wait for CLK high with timeout ---
+2824 a0 07    ldy #$07       ; Timeout counter
+2826 a9 04    lda #$04       ; CLK bit mask
+2828 2c 00 18 bit $1800      ; Check CLK
+282b 30 33    bmi $2860      ; Error if ATN
+282d d0 22    bne $2851      ; CLK high: data ready, go read
+282f 88       dey            ; Decrement timeout
+2830 d0 f6    bne $2828      ; Loop until timeout
+; --- Timeout: pulse DATA to signal "not ready" ---
 2832 ad 00 18 lda $1800
-2835 09 02    ora #$02
-2837 8d 00 18 sta $1800
-283a a0 0a    ldy #$0a
-283c 88       dey 
+2835 09 02    ora #$02       ; Set DATA OUT high
+2837 8d 00 18 sta $1800      ; Signal: "wait"
+283a a0 0a    ldy #$0a       ; Short delay
+283c 88       dey
 283d d0 fd    bne $283c
-283f 29 fd    and #$fd
-2841 8d 00 18 sta $1800
-2844 a9 04    lda #$04
+283f 29 fd    and #$fd       ; Clear DATA OUT again
+2841 8d 00 18 sta $1800      ; Ready for retry
+2844 a9 04    lda #$04       ; Wait for CLK high
 2846 2c 00 18 bit $1800
-2849 30 15    bmi $2860
-284b f0 f9    beq $2846
-284d a9 00    lda #$00
+2849 30 15    bmi $2860      ; Error if ATN
+284b f0 f9    beq $2846      ; Wait until CLK high
+284d a9 00    lda #$00       ; Clear status
 284f 85 f8    sta $f8
-2851 ac 01 18 ldy $1801
-2854 ad 00 18 lda $1800
-2857 09 02    ora #$02
-2859 8d 00 18 sta $1800
-285c 98       tya 
-285d 85 85    sta $85
-285f 60       rts 
-2860 4c 5b e8 jmp $e85b
-2863 ad 00 18 lda $1800
-2866 29 f7    and #$f7
-2868 8d 00 18 sta $1800
-286b a9 01    lda #$01
-286d 2c 00 18 bit $1800
-2870 30 ee    bmi $2860
-2872 d0 f9    bne $286d
-2874 8a       txa 
-2875 d0 10    bne $2887
-2877 a9 01    lda #$01
+; --- Read byte from parallel port ---
+2851 ac 01 18 ldy $1801      ; READ BYTE FROM PARALLEL PORT (VIA port A)
+2854 ad 00 18 lda $1800      ; Read port B
+2857 09 02    ora #$02       ; Set DATA OUT high (acknowledge)
+2859 8d 00 18 sta $1800      ; Signal: "byte received"
+285c 98       tya            ; Transfer byte to A
+285d 85 85    sta $85        ; Store in buffer
+285f 60       rts
+2860 4c 5b e8 jmp $e85b      ; Error handler
+; =============================================================================
+; PARALLEL_SEND_BYTE - Send one byte to C64 via parallel port
+; Entry: Y = index into buffer at $023E
+;        X = 0 for first byte (needs extra handshake), non-zero otherwise
+; Uses: $1800 (VIA port B) for handshake, $1801 (port A) for data
+; =============================================================================
+2863 ad 00 18 lda $1800      ; Read VIA port B
+2866 29 f7    and #$f7       ; Clear bit 3 (CLK OUT low)
+2868 8d 00 18 sta $1800      ; Signal: "drive has data to send"
+; --- Wait for C64 acknowledgment (DATA IN low) ---
+286b a9 01    lda #$01       ; Bit 0 mask (DATA IN from C64)
+286d 2c 00 18 bit $1800      ; Check DATA line
+2870 30 ee    bmi $2860      ; Error if ATN asserted
+2872 d0 f9    bne $286d      ; Wait for DATA low (C64 ready)
+; --- First byte needs extra sync handshake ---
+2874 8a       txa            ; Check if first byte (X=0)
+2875 d0 10    bne $2887      ; Skip sync if not first byte
+2877 a9 01    lda #$01       ; Wait for DATA high first
 2879 2c 00 18 bit $1800
-287c 30 e2    bmi $2860
-287e f0 f9    beq $2879
-2880 2c 00 18 bit $1800
-2883 30 db    bmi $2860
-2885 d0 f9    bne $2880
-2887 b9 3e 02 lda $023e,y
-288a 8d 01 18 sta $1801
-288d ad 00 18 lda $1800
-2890 09 08    ora #$08
-2892 8d 00 18 sta $1800
-2895 a9 01    lda #$01
-2897 2c 00 18 bit $1800
-289a 30 c4    bmi $2860
-289c f0 f9    beq $2897
-289e 60       rts 
-289f 2c 0a 60 bit $600a
-28a2 10 73    bpl $2917
-28a4 20 16 a8 jsr $a816
-28a7 58       cli 
-28a8 a5 84    lda $84
-28aa 29 8f    and #$8f
-28ac c9 0f    cmp #$0f
-28ae b0 1b    bcs $28cb
-28b0 20 25 d1 jsr $d125
-28b3 b0 3c    bcs $28f1
-28b5 20 26 a9 jsr $a926
-28b8 4c c1 a8 jmp $a8c1
-28bb 20 16 a8 jsr $a816
-28be 81 99    sta ($99,x)
-28c0 f6 99    inc $99,x
-28c2 d0 f7    bne $28bb
-28c4 58       cli 
-28c5 20 a3 d1 jsr $d1a3
-28c8 4c 2e ea jmp $ea2e
-28cb a9 04    lda #$04
-28cd 85 82    sta $82
-28cf 20 e8 d4 jsr $d4e8
-28d2 c9 2a    cmp #$2a
-28d4 f0 14    beq $28ea
-28d6 78       sei 
-28d7 a5 85    lda $85
-28d9 81 99    sta ($99,x)
-28db f6 99    inc $99,x
-28dd a5 f8    lda $f8
-28df f0 09    beq $28ea
-28e1 20 16 a8 jsr $a816
-28e4 b4 99    ldy $99,x
-28e6 c0 2a    cpy #$2a
-28e8 d0 ef    bne $28d9
-28ea 58       cli 
-28eb 20 e8 cf jsr $cfe8
-28ee 4c 2e ea jmp $ea2e
+287c 30 e2    bmi $2860      ; Error if ATN
+287e f0 f9    beq $2879      ; Wait for DATA high
+2880 2c 00 18 bit $1800      ; Then wait for DATA low again
+2883 30 db    bmi $2860      ; Error if ATN
+2885 d0 f9    bne $2880      ; Wait for DATA low
+; --- Write byte to parallel port ---
+2887 b9 3e 02 lda $023e,y    ; Get byte from buffer
+288a 8d 01 18 sta $1801      ; WRITE BYTE TO PARALLEL PORT (VIA port A)
+288d ad 00 18 lda $1800      ; Read port B
+2890 09 08    ora #$08       ; Set bit 3 (CLK OUT high)
+2892 8d 00 18 sta $1800      ; Signal: "data valid on port"
+; --- Wait for C64 acknowledge ---
+2895 a9 01    lda #$01       ; DATA bit mask
+2897 2c 00 18 bit $1800      ; Check DATA
+289a 30 c4    bmi $2860      ; Error if ATN
+289c f0 f9    beq $2897      ; Wait for DATA high (C64 took byte)
+289e 60       rts
+; =============================================================================
+; FAST_LOAD_HANDLER - Handle fast load commands in parallel mode
+; Checks if parallel mode active, then dispatches to appropriate handler
+; =============================================================================
+289f 2c 0a 60 bit $600a      ; Test parallel mode flag (bit 7)
+28a2 10 73    bpl $2917      ; Branch if NOT in parallel mode
+28a4 20 16 a8 jsr $a816      ; Get command byte from C64 via parallel
+28a7 58       cli            ; Re-enable interrupts
+28a8 a5 84    lda $84        ; Get current channel
+28aa 29 8f    and #$8f       ; Mask to get channel number
+28ac c9 0f    cmp #$0f       ; Is it command channel (15)?
+28ae b0 1b    bcs $28cb      ; Yes: handle command channel
+; --- Data channel: read and send file data ---
+28b0 20 25 d1 jsr $d125      ; Read next block from disk
+28b3 b0 3c    bcs $28f1      ; Error: handle it
+28b5 20 26 a9 jsr $a926      ; Send block to C64 via parallel
+28b8 4c c1 a8 jmp $a8c1      ; Continue with next block
+; =============================================================================
+; FAST_RECEIVE_BLOCK - Receive a full block (256 bytes) from C64
+; Used for SAVE operations - receives data via parallel port
+; =============================================================================
+28bb 20 16 a8 jsr $a816      ; Receive byte via parallel
+28be 81 99    sta ($99,x)    ; Store in buffer
+28c0 f6 99    inc $99,x      ; Increment buffer pointer
+28c2 d0 f7    bne $28bb      ; Loop until 256 bytes (pointer wraps)
+28c4 58       cli            ; Re-enable interrupts
+28c5 20 a3 d1 jsr $d1a3      ; Write block to disk
+28c8 4c 2e ea jmp $ea2e      ; Return to DOS main loop
+; --- Command channel handler ---
+28cb a9 04    lda #$04       ; Buffer #4
+28cd 85 82    sta $82        ; Set active buffer
+28cf 20 e8 d4 jsr $d4e8      ; Execute disk command
+28d2 c9 2a    cmp #$2a       ; End marker?
+28d4 f0 14    beq $28ea      ; Yes: finish up
+28d6 78       sei            ; Disable interrupts for transfer
+28d7 a5 85    lda $85        ; Get received byte
+28d9 81 99    sta ($99,x)    ; Store in command buffer
+28db f6 99    inc $99,x      ; Increment pointer
+28dd a5 f8    lda $f8        ; Check transfer status
+28df f0 09    beq $28ea      ; Done if status clear
+28e1 20 16 a8 jsr $a816      ; Receive next byte
+28e4 b4 99    ldy $99,x      ; Get buffer pointer
+28e6 c0 2a    cpy #$2a       ; Buffer full? (42 bytes)
+28e8 d0 ef    bne $28d9      ; No: continue receiving
+28ea 58       cli            ; Re-enable interrupts
+28eb 20 e8 cf jsr $cfe8      ; Execute command in buffer
+28ee 4c 2e ea jmp $ea2e      ; Return to DOS main loop
 28f1 f0 2a    beq $291d
 28f3 20 26 a9 jsr $a926
 28f6 a4 82    ldy $82
