@@ -8257,8 +8257,7 @@ ffff ff       ???
 20a2 a0 40    ldy #$40
 20a4 50 fe    bvc $20a4
 20a6 b8       clv 
-20a7 af       ???
-20a8 01 1c    ora ($1c,x)
+20a7 af 01 1c lax $1c01
 20aa 29 07    and #$07
 20ac 85 14    sta $14
 20ae bd 00 b8 lda $b800,x
@@ -8383,26 +8382,22 @@ ffff ff       ???
 21a8 ca       dex 
 21a9 d0 fa    bne $21a5
 21ab a0 3f    ldy #$3f
-21ad b3       ???
-21ae 16 bd    asl $bd,x
-21b0 00       brk 
-21b1 b0 50    bcs $2203
-21b3 fe b8 8d inc $8db8,x
-21b6 01 1c    ora ($1c,x)
+21ad b3 16    lax ($16),y
+21af bd 00 b0 lda $b000,x
+21b2 50 fe    bvc $21b2
+21b4 b8       clv
+21b5 8d 01 1c sta $1c01
 21b8 bd 00 b1 lda $b100,x
 21bb 85 1b    sta $1b
-21bd b3       ???
-21be 86 bd    stx $bd
-21c0 00       brk 
-21c1 b2       ???
+21bd b3 86    lax ($86),y
+21bf bd 00 b2 lda $b200,x
 21c2 05 1b    ora $1b
 21c4 50 fe    bvc $21c4
 21c6 8d 01 1c sta $1c01
 21c9 b8       clv 
 21ca bd 00 b3 lda $b300,x
 21cd 85 1b    sta $1b
-21cf b3       ???
-21d0 88       dey 
+21cf b3 88    lax ($88),y
 21d1 a5 1b    lda $1b
 21d3 1d 00 b4 ora $b400,x
 21d6 50 fe    bvc $21d6
@@ -8410,8 +8405,7 @@ ffff ff       ???
 21db b8       clv 
 21dc bd 00 b5 lda $b500,x
 21df 85 1b    sta $1b
-21e1 b3       ???
-21e2 8a       txa 
+21e1 b3 8a    lax ($8a),y
 21e3 a5 1b    lda $1b
 21e5 1d 00 b6 ora $b600,x
 21e8 50 fe    bvc $21e8
@@ -8485,27 +8479,22 @@ ffff ff       ???
 2283 20 46 a4 jsr $a446
 2286 38       sec 
 2287 a0 3f    ldy #$3f
-2289 b3       ???
-228a 16 bd    asl $bd,x
-228c 00       brk 
-228d b0 50    bcs $22df
-228f fe ed 01 inc $01ed,x
-2292 1c       ???
+2289 b3 16    lax ($16),y
+228b bd 00 b0 lda $b000,x
+228e 50 fe    bvc $228e
+2290 ed 01 1c sbc $1c01
 2293 d0 a7    bne $223c
 2295 bd 00 b1 lda $b100,x
 2298 85 1b    sta $1b
-229a b3       ???
-229b 86 bd    stx $bd
-229d 00       brk 
-229e b2       ???
+229a b3 86    lax ($86),y
+229c bd 00 b2 lda $b200,x
 229f 50 fe    bvc $229f
 22a1 05 1b    ora $1b
 22a3 ed 01 1c sbc $1c01
 22a6 d0 94    bne $223c
 22a8 bd 00 b3 lda $b300,x
 22ab 85 1b    sta $1b
-22ad b3       ???
-22ae 88       dey 
+22ad b3 88    lax ($88),y
 22af a5 1b    lda $1b
 22b1 50 fe    bvc $22b1
 22b3 1d 00 b4 ora $b400,x
@@ -8513,8 +8502,7 @@ ffff ff       ???
 22b9 d0 81    bne $223c
 22bb bd 00 b5 lda $b500,x
 22be 85 1b    sta $1b
-22c0 b3       ???
-22c1 8a       txa 
+22c0 b3 8a    lax ($8a),y
 22c2 a5 1b    lda $1b
 22c4 50 fe    bvc $22c4
 22c6 1d 00 b6 ora $b600,x
@@ -9075,8 +9063,8 @@ ffff ff       ???
 2758 bd 00 b9 lda $b900,x
 275b 05 54    ora $54
 275d 85 54    sta $54
-275f b3       ???
-2760 8c 29 e0 sty $e029
+275f b3 8c    lax ($8c),y
+2761 29 e0    and #$e0
 2763 05 55    ora $55
 2765 a8       tay 
 2766 b9 00 bb lda $bb00,y
