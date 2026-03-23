@@ -30,12 +30,22 @@ The original DolphinDOS 2 was a hardware/software package but these rom images c
 
 C64U instructions taken from [here](https://www.facebook.com/groups/1249159557042604/?multi_permalinks=1270521541573072).
 
+### VICE Emulator
+1. In Preferences, go to **Machine → ROM** and in Machine ROMs set Kernal to `kernal.rom` in this repository.
+2. In Drive ROMs, set 1541 to `1541.rom`.
+3. Go to **Peripheral devices → Drive** and set Parallel cable to "Standard".
+4. Check the RAM expansions from $2000 to $9FFF. Leave $A000-$BFFF unchecked.
+5. Go to **Peripheral devices → Userport devices** and set Userport device to "Userport parallel drive cable".
+
+VICE restarts and you should see DOLPHINDOS 2.0 on the screen.
+
+### All Platforms
 Reboot the machine and you should see DOLPHINDOS 2.0 on the screen.
 
 ## USAGE
 
 Use the functions keys as shortcut keys:
-* F1	LOAD"0:*",8,1(RETURN)
+* F1	LOAD AND RUN
 * F2	SYS$0 (JUMP TO MONITOR)
 * F3	DISPLAY DIRECTORY
 * F4	VERIFY(RETURN)
