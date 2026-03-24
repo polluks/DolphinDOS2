@@ -56,6 +56,18 @@ Use the functions keys as shortcut keys:
 
 Note: [Version 1](https://github.com/donnchawp/DolphinDOS2/releases/tag/1.0) retains the original DolphinDOS 2 keys.
 
+## Building from Source
+
+The kernal ROM can be assembled from `kernal.asm` using the [ACME cross-assembler](https://sourceforge.net/projects/acme-crossass/):
+
+```
+acme -o kernal.rom kernal.asm
+```
+
+On macOS, ACME can be installed with Homebrew: `brew install acme`
+
+The output `kernal.rom` is a raw 8190-byte binary that can be used directly as a KERNAL ROM replacement.
+
 ## Related Links
 * [DolphinDOS 2 Project page](http://e4aws.silverdr.com/projects/dolphindos2/).
 * [Original DolphinDOS Manual](https://web.archive.org/web/20161101205150/http://project64.c64.org/hw/dolphindos.txt).
