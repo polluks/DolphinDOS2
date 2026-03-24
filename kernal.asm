@@ -2529,10 +2529,10 @@
     bcc $6a56                                ; $6a05
     jmp $f713                                ; $6a07
 ; F-key string table
-; F1: LOa CR CLR Ru CR (LOAD then RUN)
+; F1: LOa CR Ru: CR (LOAD then RUN with colon separator)
     !byte $4c,$4f,$61                        ; $6a0a
-    !byte $0d,$93,$52                        ; $6a0d
-    !byte $75,$0d                            ; $6a10
+    !byte $0d,$52,$75                        ; $6a0d
+    !byte $3a,$0d                            ; $6a10
     !byte $00                                ; $6a12
 ; F2: Sy$0 LEFT (SYS$0 - monitor)
     !byte $53,$79,$24                        ; $6a13
