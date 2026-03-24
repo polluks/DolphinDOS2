@@ -2520,49 +2520,73 @@
 6a02 20 d5 f3 jsr $f3d5
 6a05 90 4f    bcc $6a56
 6a07 4c 13 f7 jmp $f713
-6a0a 4c 4f 61 jmp $614f
-6a0d 0d 00 53 ora $5300
-6a10 79 24 30 adc $3024,y
-6a13 9d 00 93 sta $9300,x
-6a16 40       rti
-6a17 24 0d    bit $0d
-6a19 00       brk
-6a1a 52 65    lsr $65,x
-6a1c 0d 00 93 ora $9300
-6a1f 4c 69 0d jmp $0d69
-6a22 00       brk 
-6a23 53       ???
-6a24 41 76    eor ($76,x)
-6a26 22       ???
-6a27 40       rti 
-6a28 3a       ???
-6a29 00       brk 
-6a2a 93       ???
-6a2b 52       ???
-6a2c 75 0d    adc $0d,x
-6a2e 00       brk 
-6a2f 40       rti 
-6a30 58       cli 
-6a31 0d 00 4f ora $4f00
-6a34 70 34    bvs $6a6a
-6a36 2c 34 3a bit $3a34
-6a39 43       ???
-6a3a 6d 34 3a adc $3a34
-6a3d 4c 69 00 jmp $0069
-6a40 0b       ???
-6a41 0c       ???
-6a42 a0 0d    ldy #$0d
-6a44 00       brk 
-6a45 0b       ???
-6a46 0c       ???
-6a47 0d 00 0c ora $0c00
-6a4a 4c 4f 41 jmp $414f
-6a4d 44       ???
-6a4e 07       ???
-6a4f 2c 38 2c bit $2c38
-6a52 32       ???
-6a53 9d 00 a6 sta $a600,x
-6a56 18       clc 
+                          ; F-key string table
+                          ; F1: LOa CR CLR Ru CR (LOAD then RUN)
+6a0a 4c 4f 61 !byte $4c,$4f,$61
+6a0d 0d 93 52 !byte $0d,$93,$52
+6a10 75 0d    !byte $75,$0d
+6a12 00       !byte $00
+                          ; F2: Sy$0 LEFT (SYS$0 - monitor)
+6a13 53 79 24 !byte $53,$79,$24
+6a16 30 9d    !byte $30,$9d
+6a18 00       !byte $00
+                          ; F3: CLR @$ CR (display directory)
+6a19 93 40 24 !byte $93,$40,$24
+6a1c 0d       !byte $0d
+6a1d 00       !byte $00
+                          ; F4: Ve CR (VERIFY)
+6a1e 56 65    !byte $56,$65
+6a20 0d       !byte $0d
+6a21 00       !byte $00
+                          ; F5: CLR Li CR (LIST)
+6a22 93 4c 69 !byte $93,$4c,$69
+6a25 0d       !byte $0d
+6a26 00       !byte $00
+                          ; F6: SAv"@: (SAVE)
+6a27 53 41 76 !byte $53,$41,$76
+6a2a 22 40 3a !byte $22,$40,$3a
+6a2d 00       !byte $00
+                          ; F7: CLR Ru CR (RUN)
+6a2e 93 52 75 !byte $93,$52,$75
+6a31 0d       !byte $0d
+6a32 00       !byte $00
+                          ; F8: @X CR
+6a33 40 58    !byte $40,$58
+6a35 0d       !byte $0d
+6a36 00       !byte $00
+                          ; Strings 9-12: unused (zeroed)
+6a37 00       !byte $00
+6a38 00       !byte $00
+6a39 00       !byte $00
+6a3a 00       !byte $00
+6a3b 00       !byte $00
+6a3c 00       !byte $00
+6a3d 00       !byte $00
+6a3e 00       !byte $00
+6a3f 00       !byte $00
+6a40 00       !byte $00
+6a41 00       !byte $00
+6a42 00       !byte $00
+6a43 00       !byte $00
+6a44 00       !byte $00
+6a45 00       !byte $00
+6a46 00       !byte $00
+6a47 00       !byte $00
+6a48 00       !byte $00
+6a49 00       !byte $00
+6a4a 00       !byte $00
+6a4b 00       !byte $00
+6a4c 00       !byte $00
+6a4d 00       !byte $00
+6a4e 00       !byte $00
+6a4f 00       !byte $00
+6a50 00       !byte $00
+6a51 00       !byte $00
+6a52 00       !byte $00
+6a53 00       !byte $00
+6a54 00       !byte $00
+6a55 a6       !byte $a6
+6a56 18       clc
 6a57 60       rts 
 6a58 a5 b9    lda $b9
 6a5a 30 fa    bmi $6a56
