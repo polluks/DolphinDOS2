@@ -661,7 +661,7 @@
     lda #$04                                 ; $5bb0
     sta $028b                                ; $5bb2
     sta $0288                                ; $5bb5
-    lda #$0e                                 ; $5bb8
+    lda #$01                                 ; $5bb8
     sta $0286                                ; $5bba
     lda #$0a                                 ; $5bbd
     sta $0289                                ; $5bbf
