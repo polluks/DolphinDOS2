@@ -10074,17 +10074,18 @@ ffff ff       ???
 2f77 a9 30    lda #$30
 2f79 8d 0b 60 sta $600b
 2f7c 4c 94 c1 jmp $c194
-2f7f ff       ???
-2f80 ff       ???
-2f81 ff       ???
-2f82 ff       ???
-2f83 ff       ???
-2f84 ff       ???
-2f85 ff       ???
-2f86 ff       ???
-2f87 ff       ???
-2f88 ff       ???
-2f89 ff       ???
+; =============================================================================
+; INIT_DOLPHINDOS_FLAGS - Initialize DolphinDOS config flags on boot
+; Called from $FBA8 (patched JMP) to ensure $6000-$6003 are set to $00
+; (all features enabled) regardless of RAM power-on state.
+; Fixes: github.com/donnchawp/DolphinDOS2/issues/5
+; =============================================================================
+2f7f a9 00    lda #$00
+2f81 8d 00 60 sta $6000      ; R flag = enabled
+2f84 8d 01 60 sta $6001      ; F flag = enabled
+2f87 8d 02 60 sta $6002      ; V flag = enabled
+2f8a 8d 03 60 sta $6003      ; P flag = enabled (parallel port)
+2f8d 4c 2d eb jmp $eb2d      ; Continue normal boot
 2f8a ff       ???
 2f8b ff       ???
 2f8c ff       ???
@@ -20568,7 +20569,7 @@ ffff ff       ???
 7b9e f0 05    beq $7ba5
 7ba0 a9 24    lda #$24
 7ba2 8d 23 60 sta $6023
-7ba5 4c 2d eb jmp $eb2d
+7ba5 4c 82 af jmp $af82      ; Patched: init $6000-$6003 before continuing boot
 7ba8 a0 ac    ldy #$ac
 7baa 98       tya 
 7bab 4a       lsr a
