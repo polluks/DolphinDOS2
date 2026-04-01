@@ -10086,12 +10086,6 @@ ffff ff       ???
 2f87 8d 02 60 sta $6002      ; V flag = enabled
 2f8a 8d 03 60 sta $6003      ; P flag = enabled (parallel port)
 2f8d 4c 2d eb jmp $eb2d      ; Continue normal boot
-2f8a ff       ???
-2f8b ff       ???
-2f8c ff       ???
-2f8d ff       ???
-2f8e ff       ???
-2f8f ff       ???
 2f90 ff       ???
 2f91 ff       ???
 2f92 ff       ???
