@@ -11,17 +11,13 @@ The original DolphinDOS 2 was a hardware/software package but these rom images c
 
 ### Ultimate 64
 1. On the Ultimate64 navigate to the directory where you copied the roms.
-1. Select kernal.rom and "Flash as Alt. Kernal 3".
-1. Select 1541.rom and "Use as Drive ROM 3".
+1. Select kernal.rom and "Set as Kernal ROM".
+1. Select 1541.rom and "Set as 1541 ROM".
 1. Enter settings (F2):
-	1. U64 Specific Settings
-		* SpeedDOS Parallel Cable: Enabled.
-	1. C64 and cartridge settings.
-		* Cartridge: None.
-	    * Alternate Kernal: Alt. 3
+	1. System Setup -> Machine Tweaks
+		* Parallel Cable to Drive A: Enabled.
 	1. 1541 Drive A Settings
-		* 1541 ROM Select: Custom3*
-		* 1541 RAM BOard: $4000-$7FFF (16K)
+		* Extra RAM: Enabled
 
 ### Commodore 64 Ultimate
 1. Go into the Memory & Roms settings and choose kernal.rom for the C64, and 1541.rom for the 1541 disk drive.
