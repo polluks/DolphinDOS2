@@ -10088,13 +10088,6 @@ ffff ff       ???
 2f8a ff       ???
 2f8b ff       ???
 2f8c ff       ???
-2f8d ff       ???
-2f8e ff       ???
-2f8f ff       ???
-2f90 ff       ???
-2f91 ff       ???
-2f92 ff       ???
-2f93 ff       ???
 2f94 ff       ???
 2f95 ff       ???
 2f96 ff       ???
@@ -10173,32 +10166,25 @@ ffff ff       ???
 2fdf ff       ???
 2fe0 ff       ???
 2fe1 ff       ???
-2fe2 ff       ???
-2fe3 ff       ???
-2fe4 ff       ???
-2fe5 ff       ???
-2fe6 ff       ???
-2fe7 ff       ???
-2fe8 ff       ???
-2fe9 ff       ???
-2fea ff       ???
-2feb ff       ???
-2fec ff       ???
-2fed ff       ???
-2fee ff       ???
-2fef ff       ???
-2ff0 ff       ???
-2ff1 ff       ???
-2ff2 ff       ???
-2ff3 ff       ???
-2ff4 ff       ???
-2ff5 ff       ???
-2ff6 ff       ???
-2ff7 ff       ???
-2ff8 ff       ???
-2ff9 ff       ???
-2ffa ff       ???
-2ffb ff       ???
+; =============================================================================
+; INIT_DOLPHINDOS_FLAGS - Initialize DolphinDOS config flags on boot
+; Called from $EB2A (patched JMP, was $FB99) to ensure $6000-$6003 are set
+; to $00 (all features enabled) regardless of RAM power-on state.
+; Also performs the original STA $1C00 and sets track interleave $6023=$24.
+; JMP target $AFE5 chosen so operand bytes are checksum-neutral with the
+; original target $FB99 ($E5+$AF = $99+$FB = $194).
+; Fixes: github.com/donnchawp/DolphinDOS2/issues/5
+; =============================================================================
+2fe2 8d 00 1c sta $1c00      ; Originally at $FB99
+2fe5 a9 00    lda #$00
+2fe7 8d 00 60 sta $6000      ; R flag = enabled
+2fea 8d 01 60 sta $6001      ; F flag = enabled
+2fed 8d 02 60 sta $6002      ; V flag = enabled
+2ff0 8d 03 60 sta $6003      ; P flag = enabled (parallel port)
+2ff3 a9 24    lda #$24
+2ff5 8d 23 60 sta $6023      ; Track interleave
+2ff8 4c 2d eb jmp $eb2d      ; Continue normal boot
+2ffb aa       ???             ; Checksum compensation (region $A000-$BFFF)
 2ffc ff       ???
 2ffd 52       ???
 2ffe 52       ???
@@ -18470,7 +18456,7 @@ ffff ff       ???
 6b21 9a       txs 
 6b22 ad 00 1c lda $1c00
 6b25 29 f7    and #$f7
-6b27 4c 99 fb jmp $fb99
+6b27 4c e5 af jmp $afe5      ; Patched: init DolphinDOS flags before boot (fixes #5)
 6b2a a9 01    lda #$01
 6b2c 8d 0c 18 sta $180c
 6b2f a9 82    lda #$82
