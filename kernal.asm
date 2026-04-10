@@ -2579,14 +2579,13 @@
 ; --- UCI freeze: accept previous state, send Control Target + Freeze ---
     lda #$02                                  ; $6a42
     sta $DF1C          ; Accept: reset Data Last → Idle ; $6a44
-    nop                ; Delay for state transition ; $6a47
-    nop                                       ; $6a48
-    ldx #$04           ; Control Target       ; $6a49
-    stx $DF1D          ; Send target byte     ; $6a4b
-    inx                ; X=$05 (Freeze cmd)   ; $6a4e
-    stx $DF1D          ; Send command byte    ; $6a4f
-    lda #$01                                  ; $6a52
-    sta $DF1C          ; Push command (CPU freezes after this) ; $6a54
+    lsr                ; A=$01 (reused for push later) ; $6a47
+    sta $DC00          ; Deselect keyboard row 0 (hides F7 from menu) ; $6a48
+    ldx #$04           ; Control Target       ; $6a4b
+    stx $DF1D          ; Send target byte     ; $6a4d
+    inx                ; X=$05 (Freeze cmd)   ; $6a50
+    stx $DF1D          ; Send command byte    ; $6a51
+    sta $DF1C          ; Push command, A=$01 (CPU freezes after this) ; $6a54
     pla                ; Balance stack (from F-key dispatch) ; $6a57
     rts                                       ; $6a58
     lda $b9                                  ; $6a59
