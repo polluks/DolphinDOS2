@@ -2523,12 +2523,12 @@
     sta $026d,x                              ; $69f3
     lda $ba                                  ; $69f6
     sta $0263,x                              ; $69f8
-    beq $6a24                                ; $69fb
+    beq $6a30                                ; $69fb
     cmp #$03                                 ; $69fd
-    beq $6a24                                ; $69ff
+    beq $6a30                                ; $69ff
     bcc $6a08                                ; $6a01
     jsr $f3d5                                ; $6a03
-    bcc $6a24                                ; $6a06
+    bcc $6a30                                ; $6a06
     jmp $f713                                ; $6a08
 ; F-key string table
 ; F1: LOa CR Ru: CR (LOAD then RUN with colon separator)
@@ -2548,18 +2548,18 @@
     !byte $56,$65                            ; $6a1f
     !byte $0d                                ; $6a21
     !byte $00                                ; $6a22
-; F5: (intercepted at $6bd5 - opens UCI menu instead)
-    !byte $93                                ; $6a23
-    clc                                      ; $6a24 (relocated branch target for clc+rts)
-    rts                                      ; $6a25
+; F5: Ru: CR (RUN:)
+    !byte $52,$75,$3a                        ; $6a23
     !byte $0d                                ; $6a26
     !byte $00                                ; $6a27
 ; F6: SAv"@: (SAVE)
     !byte $53,$41,$76                        ; $6a28
     !byte $22,$40,$3a                        ; $6a2b
     !byte $00                                ; $6a2e
-; F7: CLR Ru CR (RUN)
-    !byte $93,$52,$75                        ; $6a2f
+; F7: (intercepted at $6bd5 - opens UCI menu instead)
+    !byte $93                                ; $6a2f
+    clc                                      ; $6a30 (relocated branch target for clc+rts)
+    rts                                      ; $6a31
     !byte $0d                                ; $6a32
     !byte $00                                ; $6a33
 ; F8: @X CR
@@ -2567,11 +2567,11 @@
     !byte $0d                                ; $6a36
     !byte $00                                ; $6a37
 ; =============================================================================
-; UCI Menu: F5 handler - opens Ultimate menu via UCI freeze command
+; UCI Menu: F7 handler - opens Ultimate menu via UCI freeze command
 ; Hooked from F-key dispatch at $6bd5 (jmp $6a38)
 ; Uses Control Target ($04) with Freeze command ($05)
 ; =============================================================================
-    cpx #$05           ; F5 key?              ; $6a38
+    cpx #$07           ; F7 key?              ; $6a38
     beq $6a42          ; Yes: UCI freeze      ; $6a3a
 ; --- Not F5: restore original dispatch flow ---
     lda $0298          ; Original instruction from $6bd5 ; $6a3c
@@ -2590,9 +2590,9 @@
     pla                ; Balance stack (from F-key dispatch) ; $6a57
     rts                                       ; $6a58
     lda $b9                                  ; $6a59
-    bmi $6a24                                ; $6a5b
+    bmi $6a30                                ; $6a5b
     ldy $b7                                  ; $6a5d
-    beq $6a24                                ; $6a5f
+    beq $6a30                                ; $6a5f
     lda #$00                                 ; $6a61
     sta $90                                  ; $6a63
     lda $ba                                  ; $6a65
@@ -2766,7 +2766,7 @@
     jsr $feca                                ; $6bd0
     pla                                      ; $6bd3
     rts                                      ; $6bd4
-    jmp $F3B4      ; Hook: check for F5 (UCI menu) ; $6bd5
+    jmp $F3B4      ; Hook: check for F7 (UCI menu) ; $6bd5
     beq $6c10                                ; $6bd8
     sta $f8                                  ; $6bda
     lda $0297                                ; $6bdc

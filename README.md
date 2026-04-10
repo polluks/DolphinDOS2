@@ -49,9 +49,9 @@ Use the functions keys as shortcut keys:
 * F2	SYS$0 (JUMP TO MONITOR)
 * F3	DISPLAY DIRECTORY
 * F4	VERIFY(RETURN)
-* F5	Ultimate64 Menu (requires Command Interface enabled)
+* F5	RUN:
 * F6	SAVE"@:(ADD PROG NAME AND RETURN)
-* F7 	RUN(RETURN)
+* F7 	Ultimate64 Menu (requires Command Interface enabled)
 * F8	@X(RETURN)
 
 Note: [Version 1](https://github.com/donnchawp/DolphinDOS2/releases/tag/1.0) retains the original DolphinDOS 2 keys.
