@@ -1646,7 +1646,7 @@
     asl $ff                                  ; $6335
     ora $ff                                  ; $6337
     !byte $ff                                ; $6339 (undefined opcode)
-    ora ($ff),y                              ; $633a
+    !byte $11,$ff                            ; $633a (ora ($ff),y - zeropage wrap)
     !byte $ff                                ; $633c (undefined opcode)
     brk                                      ; $633d
     brk                                      ; $633e
@@ -2523,12 +2523,12 @@
     sta $026d,x                              ; $69f3
     lda $ba                                  ; $69f6
     sta $0263,x                              ; $69f8
-    beq $6a57                                ; $69fb
+    beq $6a24                                ; $69fb
     cmp #$03                                 ; $69fd
-    beq $6a57                                ; $69ff
+    beq $6a24                                ; $69ff
     bcc $6a08                                ; $6a01
     jsr $f3d5                                ; $6a03
-    bcc $6a57                                ; $6a06
+    bcc $6a24                                ; $6a06
     jmp $f713                                ; $6a08
 ; F-key string table
 ; F1: LOa CR Ru: CR (LOAD then RUN with colon separator)
@@ -2548,8 +2548,10 @@
     !byte $56,$65                            ; $6a1f
     !byte $0d                                ; $6a21
     !byte $00                                ; $6a22
-; F5: CLR Li CR (LIST)
-    !byte $93,$4c,$69                        ; $6a23
+; F5: (intercepted at $6bd5 - opens UCI menu instead)
+    !byte $93                                ; $6a23
+    clc                                      ; $6a24 (relocated branch target for clc+rts)
+    rts                                      ; $6a25
     !byte $0d                                ; $6a26
     !byte $00                                ; $6a27
 ; F6: SAv"@: (SAVE)
@@ -2564,44 +2566,33 @@
     !byte $40,$58                            ; $6a34
     !byte $0d                                ; $6a36
     !byte $00                                ; $6a37
-; Strings 9-12: unused (zeroed)
-    !byte $00                                ; $6a38
-    !byte $00                                ; $6a39
-    !byte $00                                ; $6a3a
-    !byte $00                                ; $6a3b
-    !byte $00                                ; $6a3c
-    !byte $00                                ; $6a3d
-    !byte $00                                ; $6a3e
-    !byte $00                                ; $6a3f
-    !byte $00                                ; $6a40
-    !byte $00                                ; $6a41
-    !byte $00                                ; $6a42
-    !byte $00                                ; $6a43
-    !byte $00                                ; $6a44
-    !byte $00                                ; $6a45
-    !byte $00                                ; $6a46
-    !byte $00                                ; $6a47
-    !byte $00                                ; $6a48
-    !byte $00                                ; $6a49
-    !byte $00                                ; $6a4a
-    !byte $00                                ; $6a4b
-    !byte $00                                ; $6a4c
-    !byte $00                                ; $6a4d
-    !byte $00                                ; $6a4e
-    !byte $00                                ; $6a4f
-    !byte $00                                ; $6a50
-    !byte $00                                ; $6a51
-    !byte $00                                ; $6a52
-    !byte $00                                ; $6a53
-    !byte $00                                ; $6a54
-    !byte $00                                ; $6a55
-    !byte $a6                                ; $6a56
-    clc                                      ; $6a57
-    rts                                      ; $6a58
+; =============================================================================
+; UCI Menu: F5 handler - opens Ultimate menu via UCI freeze command
+; Hooked from F-key dispatch at $6bd5 (jmp $6a38)
+; Uses Control Target ($04) with Freeze command ($05)
+; =============================================================================
+    cpx #$05           ; F5 key?              ; $6a38
+    beq $6a42          ; Yes: UCI freeze      ; $6a3a
+; --- Not F5: restore original dispatch flow ---
+    lda $0298          ; Original instruction from $6bd5 ; $6a3c
+    jmp $F554          ; Back to beq $6c10 at $6bd8 (tests Z flag) ; $6a3f
+; --- UCI freeze: accept previous state, send Control Target + Freeze ---
+    lda #$02                                  ; $6a42
+    sta $DF1C          ; Accept: reset Data Last → Idle ; $6a44
+    nop                ; Delay for state transition ; $6a47
+    nop                                       ; $6a48
+    ldx #$04           ; Control Target       ; $6a49
+    stx $DF1D          ; Send target byte     ; $6a4b
+    inx                ; X=$05 (Freeze cmd)   ; $6a4e
+    stx $DF1D          ; Send command byte    ; $6a4f
+    lda #$01                                  ; $6a52
+    sta $DF1C          ; Push command (CPU freezes after this) ; $6a54
+    pla                ; Balance stack (from F-key dispatch) ; $6a57
+    rts                                       ; $6a58
     lda $b9                                  ; $6a59
-    bmi $6a57                                ; $6a5b
+    bmi $6a24                                ; $6a5b
     ldy $b7                                  ; $6a5d
-    beq $6a57                                ; $6a5f
+    beq $6a24                                ; $6a5f
     lda #$00                                 ; $6a61
     sta $90                                  ; $6a63
     lda $ba                                  ; $6a65
@@ -2775,7 +2766,7 @@
     jsr $feca                                ; $6bd0
     pla                                      ; $6bd3
     rts                                      ; $6bd4
-    lda $0298                                ; $6bd5
+    jmp $F3B4      ; Hook: check for F5 (UCI menu) ; $6bd5
     beq $6c10                                ; $6bd8
     sta $f8                                  ; $6bda
     lda $0297                                ; $6bdc
