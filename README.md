@@ -21,7 +21,7 @@ The original DolphinDOS 2 was a hardware/software package but these rom images c
 	1. 1541 Drive A Settings
 		* Extra RAM: Enabled
 
-**Note:** The Action Replay and other cartridges that use the $DF00-$DFFF I/O range will conflict with the Command Interface. Disable any such cartridges for F5 (Ultimate64 Menu) to work.
+**Note:** The Action Replay and other cartridges that use the $DF00-$DFFF I/O range will conflict with the Command Interface. Disable any such cartridges for F7 (Ultimate64 Menu) to work.
 
 ### Commodore 64 Ultimate
 1. Go into the Memory & Roms settings and choose kernal.rom for the C64, and 1541.rom for the 1541 disk drive.
@@ -51,7 +51,7 @@ Use the functions keys as shortcut keys:
 * F4	VERIFY(RETURN)
 * F5	RUN:
 * F6	SAVE"@:(ADD PROG NAME AND RETURN)
-* F7 	Ultimate64 Menu (requires Command Interface enabled)
+* F7 	Ultimate64 Menu (requires Command Interface enabled, only works when nothing else running.)
 * F8	@X(RETURN)
 
 Note: [Version 1](https://github.com/donnchawp/DolphinDOS2/releases/tag/1.0) retains the original DolphinDOS 2 keys.
