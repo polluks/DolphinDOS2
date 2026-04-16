@@ -74,3 +74,4 @@ The output `kernal.rom` is a raw 8190-byte binary that can be used directly as a
 * [Ultimate 64 homepage](https://ultimate64.com/).
 * [1541 Ultimate Facebook Group](https://www.facebook.com/groups/1541ultimate/).
 * [Unofficial Dolphin DOS2 Github Repository](https://github.com/donnchawp/DolphinDOS2)
+* [Commented C64 KERNAL disassembly (mist64/c64rom)](https://github.com/mist64/c64rom)
